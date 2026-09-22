@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PixelCam 界面预览（电脑查看版）</title>
+<style>
+  :root {
+    --bg: #0c0c10;
+    --surface: #15151c;
+    --surface-variant: #20202a;
+    --on-surface: #f3f3f7;
+    --on-surface-variant: #adadbd;
+    --outline: #34343f;
+    --brand: #7c5cff;
+    --accent: #ff6ba6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08080b;
+    color: var(--on-surface);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px 16px 40px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: var(--on-surface-variant); font-size: 13px; margin-bottom: 16px; }
+  .tabs { display: flex; gap: 10px; margin-bottom: 18px; }
+  .tab {
+    padding: 8px 22px;
+    border-radius: 20px;
+    border: 1px solid var(--outline);
+    background: var(--surface);
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .15s;
+  }
+  .tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .phone {
+    width: 380px;
+    height: 800px;
+    border-radius: 34px;
+    border: 8px solid #1c1c24;
+    background: var(--bg);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 48px rgba(0,0,0,.6);
+  }
+  /* 状态栏 + 挖孔，模拟真机顶部 */
+  .statusbar {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 12px;
+    color: var(--on-surface);
+    background: var(--bg);
+    position: relative;
+    z-index: 5;
+  }
+  .punch {
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #000;
+    border: 2px solid #16161c;
+  }
+  .screen { display: none; height: calc(100% - 34px); overflow-y: auto; }
+  .screen.active { display: block; }
+  .screen::-webkit-scrollbar { width: 0; }
+
+  /* ——— 首页 ——— */
+  .home { padding: 12px 20px 24px; }
+  .home h2 { font-size: 26px; font-weight: 700; }
+  .home .tagline { color: var(--on-surface-variant); font-size: 13px; margin-top: 2px; }
+  .action-card {
+    display: flex; align-items: center;
+    background: var(--surface-variant);
+    border-radius: 18px;
+    padding: 18px;
+    margin-top: 12px;
+    cursor: pointer;
+    transition: filter .15s;
+  }
+  .action-card:hover { filter: brightness(1.15); }
+  .action-card .ic { font-size: 24px; color: var(--brand); margin-right: 14px; }
+  .action-card .t { font-weight: 600; font-size: 15px; }
+  .action-card .d { color: var(--on-surface-variant); font-size: 12px; margin-top: 2px; }
+  .card-row { display: flex; gap: 12px; }
+  .card-row .action-card { flex: 1; }
+  .grid-title { display: flex; align-items: baseline; gap: 8px; margin: 22px 0 12px; }
+  .grid-title .gt { font-size: 16px; font-weight: 600; }
+  .grid-title .cnt { color: var(--on-surface-variant); font-size: 12px; }
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .photo {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2a2a38, #3d3556);
+    display: flex; align-items: flex-end;
+    padding: 6px;
+    font-size: 10px;
+    color: rgba(255,255,255,.65);
+    position: relative;
+    cursor: pointer;
+  }
+  .photo:nth-child(2n) { background: linear-gradient(135deg, #33292e, #55404f); }
+  .photo:nth-child(3n) { background: linear-gradient(135deg, #232d3a, #3a5066); }
+  .photo:hover::after {
+    content: "长按删除";
+    position: absolute; inset: 0;
+    background: rgba(12,12,16,.72);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #fff;
+  }
+  .hint {
+    margin-top: 14px;
+    color: var(--on-surface-variant);
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  /* ——— 图传 ——— */
+  .page-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px;
+  }
+  .back {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer; border-radius: 50%;
+  }
+  .back:hover { background: var(--surface-variant); }
+  .page-head .pt { font-size: 19px; font-weight: 600; }
+  .chips { display: flex; gap: 8px; padding: 4px 20px 0; }
+  .chip {
+    padding: 7px 14px;
+    border-radius: 10px;
+    background: var(--surface-variant);
+    color: var(--on-surface-variant);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .chip.active { background: var(--brand); color: #fff; }
+  .panel { padding: 18px 20px; }
+  .big-btn {
+    width: 100%;
+    padding: 13px 0;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: 22px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .big-btn:hover { filter: brightness(1.12); }
+  .empty-note {
+    margin-top: 16px;
+    color: var(--on-surface-variant);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .device-item {
+    display: flex; align-items: center;
+    background: var(--surface-variant);
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 12px;
+  }
+  .device-item .n { font-weight: 500; font-size: 14px; }
+  .device-item .m { color: var(--on-surface-variant); font-size: 12px; margin-top: 2px; }
+  .device-item .go { margin-left: auto; color: var(--brand); font-weight: 600; font-size: 14px; }
+
+  /* ——— 修图 ——— */
+  .editor { display: flex; flex-direction: column; height: 100%; }
+  .ed-head { display: flex; align-items: center; padding: 4px 6px; }
+  .ed-title { flex: 1; margin-left: 2px; }
+  .ed-title .f { font-size: 14px; font-weight: 600; }
+  .ed-title .fc { font-size: 11px; color: var(--brand); margin-top: 1px; }
+  .ed-ic {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; cursor: pointer; border-radius: 50%;
+  }
+  .ed-ic:hover { background: var(--surface-variant); }
+  .preview {
+    flex: 1;
+    margin: 4px 0;
+    background:
+      radial-gradient(ellipse at 65% 40%, #5a4a3a 0%, transparent 55%),
+      radial-gradient(ellipse at 35% 60%, #3d3548 0%, transparent 60%),
+      #101014;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .preview .face {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #c9a189, #8a6a55 70%);
+    opacity: .85;
+  }
+  .preview .badge {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(0,0,0,.8);
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .preview .lp {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.55);
+    font-size: 11px;
+    background: rgba(0,0,0,.45);
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+  .presets { display: flex; gap: 8px; padding: 6px 20px; overflow-x: auto; }
+  .presets::-webkit-scrollbar { height: 0; }
+  .preset {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 50px;
+    background: var(--surface-variant);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .preset.active { background: var(--brand); color: #fff; }
+  .ed-tabs { display: flex; gap: 4px; padding: 4px 8px 0; border-bottom: 1px solid transparent; }
+  .ed-tab {
+    padding: 10px 14px;
+    color: var(--on-surface-variant);
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .ed-tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+  .sliders { padding: 10px 20px 18px; }
+  .srow { display: flex; align-items: center; margin: 9px 0; }
+  .srow .lb { width: 56px; font-size: 13.5px; flex-shrink: 0; }
+  .srow .track {
+    flex: 1; height: 4px;
+    background: var(--surface-variant);
+    border-radius: 2px;
+    position: relative;
+  }
+  .srow .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--brand);
+    border-radius: 2px;
+  }
+  .srow .knob {
+    position: absolute; top: 50%;
+    width: 16px; height: 16px;
+    background: var(--brand);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 4px rgba(0,0,0,.5);
+  }
+  .srow .val { width: 36px; text-align: right; font-size: 12px; color: var(--on-surface-variant); flex-shrink: 0; }
+
+  /* ——— 新版修图：单层工具面板 + 底部工具条 ——— */
+  .panel { flex-shrink: 0; height: 250px; padding: 2px 20px 0; overflow: hidden; position: relative; }
+  .panel .srow { margin: 4px 0; }
+  .panel .srow .lb { width: 48px; }
+  .sec {
+    font-size: 11px; color: var(--on-surface-variant);
+    margin: 8px 0 2px; letter-spacing: .5px;
+  }
+  .btools {
+    flex-shrink: 0; display: flex; height: 58px;
+    background: var(--surface-variant);
+    border-top: 1px solid var(--outline);
+  }
+  .btool {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+    font-size: 10.5px; color: var(--on-surface-variant); cursor: pointer;
+  }
+  .btool .bi { font-size: 17px; line-height: 1; }
+  .btool.active { color: var(--brand); }
+  .btool .bi-label { font-weight: 600; }
+  .panel-scroll-hint {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: rgba(255,255,255,.3);
+  }
+  /* 抽屉式参数面板：参数 chip 行 + 单滑块 */
+  .editor .panel { height: 106px; padding: 4px 14px 0; }
+  .dchips { display: flex; gap: 8px; overflow-x: auto; padding: 6px 0 2px; }
+  .dchips::-webkit-scrollbar { height: 0; }
+  .dchip {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 13px; border-radius: 50px; background: var(--surface-variant);
+    font-size: 12.5px; cursor: pointer; user-select: none;
+  }
+  .dchip .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--brand); }
+  .dchip.active { background: var(--brand); color: #fff; font-weight: 600; }
+  .dchip.active .dot { background: #fff; }
+  .dchip.disabled { opacity: .45; cursor: default; }
+  .drow { display: flex; align-items: center; }
+  .drow .srow { flex: 1; margin: 0; padding: 5px 0 0; }
+  .drow .srow .lb { width: 50px; }
+  .rz {
+    flex-shrink: 0; margin-left: 10px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: transparent; border: 1px solid var(--outline);
+    color: var(--on-surface-variant); cursor: pointer; font-size: 13px; line-height: 1;
+  }
+  /* 滤镜行样式（切到滤镜工具时示意） */
+  .filters { display: none; }
+
+
+  .footer-note {
+    margin-top: 20px;
+    color: var(--on-surface-variant);
+    font-size: 12.5px;
+    max-width: 420px;
+    text-align: center;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<h1>PixelCam 界面预览</h1>
+<div class="sub">电脑浏览器直接查看 · 与真机暗色主题一致 · 点击下方切换页面</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="show(0, this)">首页</div>
+  <div class="tab" onclick="show(1, this)">连接相机</div>
+  <div class="tab" onclick="show(2, this)">修图</div>
+</div>
+
+<div class="phone">
+  <div class="statusbar">
+    <span>13:46</span>
+    <div class="punch" title="相机挖孔"></div>
+    <span>📶 🔋 86%</span>
+  </div>
+
+  <!-- 首页 -->
+  <div class="screen home active" id="s0">
+    <h2>PixelCam</h2>
+    <div class="tagline">相机图传 · 端上美颜</div>
+
+    <div class="action-card"><span class="ic">🔌</span><div><div class="t">连接相机</div><div class="d">USB OTG / 相机 WiFi / 无线 SD 卡</div></div></div>
+    <div class="card-row">
+      <div class="action-card"><span class="ic">🖼️</span><div><div class="t">相册导入</div><div class="d">从手机里选</div></div></div>
+      <div class="action-card"><span class="ic">📷</span><div><div class="t">拍照</div><div class="d">直接拍一张</div></div></div>
+    </div>
+
+    <div class="grid-title"><span class="gt">最近导入</span><span class="cnt">6 张</span><span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--on-surface-variant)">AI自动美化 <span style="width:26px;height:14px;border-radius:8px;background:var(--primary);display:inline-flex;padding:2px"><span style="width:10px;height:10px;border-radius:50%;background:var(--on-primary);margin-left:auto"></span></span><span title="AI自动美化设置">⚙</span></span></div>
+    <div class="photo-grid">
+      <div class="photo">IMG_1001.jpg</div>
+      <div class="photo">IMG_1002.jpg</div>
+      <div class="photo">PixelCam_1604.jpg</div>
+      <div class="photo">IMG_1004.jpg</div>
+      <div class="photo">DSC01234.jpg</div>
+      <div class="photo">IMG_1006.jpg</div>
+    </div>
+    <div class="hint">💡 <b>长按</b>任意缩略图可删除（会弹确认框）；单击进入修图。只删应用内副本，已导出到相册的成图不受影响。</div>
+  </div>
+
+  <!-- 图传 -->
+  <div class="screen" id="s1">
+    <div class="page-head">
+      <div class="back">←</div>
+      <div class="pt">相机图传</div>
+    </div>
+    <div class="chips">
+      <div class="chip active">USB 直连</div>
+      <div class="chip">相机 WiFi</div>
+      <div class="chip">无线 SD 卡</div>
+    </div>
+    <div class="panel">
+      <button class="big-btn">🔄 &nbsp;扫描 USB 设备</button>
+      <div class="empty-note">没有检测到设备。请用 OTG 转接线把相机连到手机，并确认相机已开机。</div>
+      <div class="device-item">
+        <div><div class="n">Canon EOS R6</div><div class="m">Canon · ID 04a9:3272</div></div>
+        <div class="go">连接</div>
+      </div>
+    </div>
+    <div class="hint" style="margin:0 20px;">💡 扫描按钮已改为全宽主色大按钮，与「相机 WiFi」页的连接按钮同级观感。</div>
+  </div>
+
+  <!-- 修图（新布局：大预览 + 单层工具面板 + 底部工具条） -->
+  <div class="screen" id="s2">
+    <div class="editor">
+      <div class="ed-head">
+        <div class="ed-ic">←</div>
+        <div class="ed-title"><div class="f">IMG_1001.jpg</div><div class="fc">检测到 1 张人脸</div></div>
+        <div class="ed-ic" title="撤销上一步">↶</div>
+        <div class="ed-ic" title="重做下一步" style="opacity:.4">↷</div>
+        <div class="ed-ic" title="重置全部美化（保留构图）">↺</div>
+        <div class="ed-ic" title="更多：保存调整 / 保存到手机">⋮</div>
+      </div>
+      <div class="preview">
+        <div class="face"></div>
+        <div class="badge">原图</div>
+        <div class="lp">长按预览图对比原图</div>
+      </div>
+      <!-- 当前工具：美颜（抽屉式：选 chip 只看一根滑条，面板很矮） -->
+      <div class="panel">
+        <div class="dchips">
+          <span class="dchip active">磨皮<span class="dot"></span></span>
+          <span class="dchip">美白<span class="dot"></span></span>
+          <span class="dchip">祛痘<span class="dot"></span></span>
+          <span class="dchip">红润<span class="dot"></span></span>
+          <span class="dchip">瘦脸<span class="dot"></span></span>
+          <span class="dchip">V 脸</span>
+          <span class="dchip">大眼<span class="dot"></span></span>
+          <span class="dchip disabled">瘦鼻</span>
+        </div>
+        <div class="drow">
+          <div class="srow"><div class="lb">磨皮</div><div class="track"><div class="fill" style="width:28%"></div><div class="knob" style="left:28%"></div></div><div class="val">28</div></div>
+          <button class="rz" title="归零：只重置当前选中的参数（磨皮），顶栏 ↺ 才重置全部">↺</button>
+        </div>
+      </div>
+      <!-- 底部工具条：预设 / 美颜 / 调色 / 滤镜 / 构图 -->
+      <div class="btools">
+        <div class="btool"><div class="bi">✨</div>预设</div>
+        <div class="btool active"><div class="bi">🙂</div><div class="bi-label">美颜</div></div>
+        <div class="btool"><div class="bi">🎚</div>调色</div>
+        <div class="btool"><div class="bi">🎞</div>滤镜</div>
+        <div class="btool"><div class="bi">✂</div>构图</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div class="footer-note">
+    修图页：顶部只留「返回 · 撤销 ↶ · 重做 ↷ · 重置全部 · 更多 ⋮」，中间大预览，底部 5 工具（预设 / 美颜 / 调色 / 滤镜 / 构图）。<br>
+    美颜与调色为抽屉式：上方参数 chip 一行横滑，点哪个只显示哪一根滑条（面板 104dp，预览最大化）；<br>
+    小圆点 = 已调过、行尾「归零」只重置当前参数；顶栏 ↺ 重置全部美化（构图保留）。五官 chip 在无人脸时置灰。<br>
+    ⋮ 菜单：「保存调整」= 全尺寸烘焙后原地覆盖当前图片，返回首页该缩略图即更新；「保存到手机」= 导出相册 Pictures/PixelCam。<br>
+    有未保存调整时按返回会弹三选（保存并退出 / 放弃并退出 / 继续编辑）。撤销/重做最多 30 步；滤镜页逐滤镜实时小样。<br>
+    首页开关已更名「AI自动美化」：配置改为强度（轻 / 标准 / 明显），导入时自动按亮度 + 人脸自适应配参，产出「_美化」副本供对比挑选。
+  </div>
+
+<script>
+  function show(i, el) {
+    document.querySelectorAll('.screen').forEach((s, k) => s.classList.toggle('active', k === i));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+</script>
+</body>
+</html>
