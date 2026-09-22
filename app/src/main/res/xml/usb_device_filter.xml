@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB class 6 = 静态图像设备（PTP / MTP 相机） -->
+    <usb-device class="6" />
+</resources>
