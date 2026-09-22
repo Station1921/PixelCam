@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PixelCam</string>
+    <string name="tab_skin">美肤</string>
+    <string name="tab_shape">美型</string>
+    <string name="tab_color">调色</string>
+    <string name="tab_filter">滤镜</string>
+</resources>
